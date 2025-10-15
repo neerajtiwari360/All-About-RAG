@@ -12,26 +12,34 @@ from dotenv import load_dotenv
 from src.data_loader import load_all_documents
 from src.vectorstore import FaissVectorStore
 from src.search import RAGSearch
+from src.config import config, get_server_config, get_document_config, get_search_config, get_llm_config
 
 # Load environment variables
 load_dotenv()
 
+# Load configuration
+server_config = get_server_config()
+doc_config = get_document_config()
+search_config = get_search_config()
+llm_config = get_llm_config()
+
 # Initialize FastAPI app
 app = FastAPI(
-    title="RAG API",
-    description="Retrieval-Augmented Generation API for document search and question answering",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    title=server_config.title,
+    description=server_config.description,
+    version=server_config.version,
+    docs_url=server_config.docs_url,
+    redoc_url=server_config.redoc_url
 )
 
 # Add CORS middleware
+cors_config = config.get_cors_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure as needed for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_config["allow_origins"],
+    allow_credentials=cors_config["allow_credentials"],
+    allow_methods=cors_config["allow_methods"],
+    allow_headers=cors_config["allow_headers"],
 )
 
 # Global variables for RAG components
@@ -41,7 +49,16 @@ vectorstore: Optional[FaissVectorStore] = None
 # Pydantic models for request/response
 class SearchRequest(BaseModel):
     query: str
-    top_k: Optional[int] = 3
+    top_k: Optional[int] = search_config.default_top_k
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "query": "What are the main topics discussed in the documents?",
+                "top_k": 3
+            }
+        }
+    }
     
 class SearchResponse(BaseModel):
     query: str
@@ -81,12 +98,12 @@ def initialize_rag():
 
 def get_documents_info() -> List[DocumentInfo]:
     """Get information about documents in the data folder"""
-    data_path = Path("data")
+    data_path = Path(doc_config.data_directory)
     documents = []
     
     if data_path.exists():
         for file_path in data_path.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in ['.pdf', '.txt', '.csv', '.xlsx', '.docx', '.json']:
+            if file_path.is_file() and file_path.suffix.lower() in doc_config.supported_formats:
                 documents.append(DocumentInfo(
                     filename=file_path.name,
                     size=file_path.stat().st_size,
@@ -124,8 +141,9 @@ async def health_check():
     total_documents = None
     
     # Check if vectorstore exists
-    faiss_path = Path("faiss_store/faiss.index")
-    meta_path = Path("faiss_store/metadata.pkl")
+    vectorstore_config = config.get_vectorstore_config()
+    faiss_path = Path(vectorstore_config.persist_directory) / "faiss.index"
+    meta_path = Path(vectorstore_config.persist_directory) / "metadata.pkl"
     
     if faiss_path.exists() and meta_path.exists():
         vectorstore_exists = True
@@ -155,8 +173,15 @@ async def upload_documents(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
     
+    # Validate file count
+    if len(files) > doc_config.max_files_per_upload:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Too many files. Maximum {doc_config.max_files_per_upload} files allowed per upload."
+        )
+    
     # Create data directory if it doesn't exist
-    data_path = Path("data")
+    data_path = Path(doc_config.data_directory)
     data_path.mkdir(exist_ok=True)
     
     uploaded_files = []
@@ -169,30 +194,39 @@ async def upload_documents(files: List[UploadFile] = File(...)):
                 
             # Check file extension
             file_ext = Path(file.filename).suffix.lower()
-            if file_ext not in ['.pdf', '.txt', '.csv', '.xlsx', '.docx', '.json']:
+            if file_ext not in doc_config.supported_formats:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Unsupported file type: {file_ext}. Supported: .pdf, .txt, .csv, .xlsx, .docx, .json"
+                    detail=f"Unsupported file type: {file_ext}. Supported: {', '.join(doc_config.supported_formats)}"
+                )
+            
+            # Check file size
+            content = await file.read()
+            file_size_mb = len(content) / (1024 * 1024)
+            if file_size_mb > doc_config.max_file_size_mb:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {file.filename} is too large ({file_size_mb:.1f}MB). Maximum size: {doc_config.max_file_size_mb}MB"
                 )
             
             file_path = data_path / file.filename
             
             # Save file
             with open(file_path, "wb") as buffer:
-                content = await file.read()
                 buffer.write(content)
             
             uploaded_files.append(file.filename)
         
         # Rebuild vectorstore
         print("[INFO] Rebuilding vectorstore with new documents...")
-        docs = load_all_documents("data")
+        docs = load_all_documents(doc_config.data_directory)
         
         if not docs:
             raise HTTPException(status_code=400, detail="No valid documents found to process")
         
         # Initialize new vectorstore
-        vectorstore = FaissVectorStore("faiss_store")
+        vectorstore_config = config.get_vectorstore_config()
+        vectorstore = FaissVectorStore(vectorstore_config.persist_directory)
         vectorstore.build_from_documents(docs)
         
         # Reinitialize RAG search
@@ -224,21 +258,39 @@ async def search_documents(request: SearchRequest):
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
     
+    # Validate top_k
+    top_k = request.top_k or search_config.default_top_k
+    if top_k < search_config.min_top_k or top_k > search_config.max_top_k:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"top_k must be between {search_config.min_top_k} and {search_config.max_top_k}"
+        )
+    
     try:
         # Perform RAG search
-        summary = rag_search.search_and_summarize(request.query, top_k=request.top_k)
+        summary = rag_search.search_and_summarize(request.query, top_k=top_k)
         
         # Get detailed source information
-        results = rag_search.vectorstore.query(request.query, top_k=request.top_k)
+        results = rag_search.vectorstore.query(request.query, top_k=top_k)
         
         sources = []
         for i, result in enumerate(results):
-            sources.append({
+            text = result["metadata"]["text"]
+            text_preview = text[:search_config.text_preview_length]
+            if len(text) > search_config.text_preview_length:
+                text_preview += "..."
+            
+            source = {
                 "chunk_id": i,
-                "distance": float(result["distance"]),
-                "text_preview": result["metadata"]["text"][:200] + "..." if len(result["metadata"]["text"]) > 200 else result["metadata"]["text"],
-                "full_text": result["metadata"]["text"]
-            })
+                "text_preview": text_preview,
+                "full_text": text
+            }
+            
+            # Include distance if configured
+            if search_config.include_distances and "distance" in result:
+                source["distance"] = float(result["distance"])
+            
+            sources.append(source)
         
         return SearchResponse(
             query=request.query,
@@ -257,7 +309,8 @@ async def clear_vectorstore():
     
     try:
         # Remove vectorstore files
-        vectorstore_path = Path("faiss_store")
+        vectorstore_config = config.get_vectorstore_config()
+        vectorstore_path = Path(vectorstore_config.persist_directory)
         if vectorstore_path.exists():
             shutil.rmtree(vectorstore_path)
         
@@ -274,7 +327,7 @@ async def clear_vectorstore():
 async def clear_documents():
     """Clear all documents from the data folder"""
     try:
-        data_path = Path("data")
+        data_path = Path(doc_config.data_directory)
         if data_path.exists():
             for file_path in data_path.iterdir():
                 if file_path.is_file():
@@ -287,17 +340,22 @@ async def clear_documents():
 
 if __name__ == "__main__":
     # Check for required environment variables
-    gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    gemini_api_key = os.getenv(llm_config.api_key_env) or os.getenv(llm_config.fallback_api_key_env)
     if not gemini_api_key:
-        print("[ERROR] Gemini API key not found. Set GEMINI_API_KEY or GOOGLE_API_KEY in your environment.")
+        print(f"[ERROR] API key not found. Set {llm_config.api_key_env} or {llm_config.fallback_api_key_env} in your environment.")
         exit(1)
     
     # Run the application
     print("[INFO] Starting RAG API server...")
+    print(f"[INFO] Configuration loaded from config.yaml")
+    print(f"[INFO] Server: {server_config.host}:{server_config.port}")
+    print(f"[INFO] Data directory: {doc_config.data_directory}")
+    print(f"[INFO] Supported formats: {doc_config.supported_formats}")
+    
     uvicorn.run(
         "api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        host=server_config.host,
+        port=server_config.port,
+        reload=server_config.reload,
+        log_level=server_config.log_level
     )

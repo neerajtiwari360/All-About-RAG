@@ -1,0 +1,305 @@
+# RAG System Configuration
+# This file contains all configurable parameters for the RAG system
+# Modify these values to customize the behavior without changing code
+
+# API Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+  log_level: "info"
+  title: "RAG API"
+  description: "Retrieval-Augmented Generation API for document search and question answering"
+  version: "1.0.0"
+  docs_url: "/docs"
+  redoc_url: "/redoc"
+
+# CORS Configuration
+cors:
+  allow_origins: ["*"]  # Configure for production security
+  allow_credentials: true
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+
+# Document Processing Configuration
+documents:
+  # Data directory for document storage
+  data_directory: "data"
+  
+  # Supported file formats
+  supported_formats:
+    - ".pdf"
+    - ".txt"
+    - ".csv"
+    - ".xlsx"
+    - ".docx"
+    - ".json"
+  
+  # Maximum file size in MB
+  max_file_size_mb: 50
+  
+  # Maximum number of files per upload
+  max_files_per_upload: 10
+
+# Text Chunking Configuration
+chunking:
+  # Chunk size in characters
+  chunk_size: 1000
+  
+  # Overlap between chunks in characters
+  chunk_overlap: 200
+  
+  # Text separators for chunking (in order of preference)
+  separators:
+    - "\n\n"
+    - "\n"
+    - " "
+    - ""
+  
+  # Length function to use
+  length_function: "len"
+
+# Embedding Model Configuration
+embedding:
+  # Model name for sentence transformers
+  model_name: "all-MiniLM-L6-v2"
+  
+  # Alternative models (uncomment to use)
+  # model_name: "all-mpnet-base-v2"  # Higher quality, slower
+  # model_name: "paraphrase-MiniLM-L6-v2"  # Good for paraphrase detection
+  
+  # Embedding batch size for processing
+  batch_size: 32
+  
+  # Show progress bar during embedding
+  show_progress_bar: true
+  
+  # Device to use for embedding (auto, cpu, cuda, mps)
+  device: "auto"
+
+# Vector Store Configuration
+vectorstore:
+  # Storage directory for FAISS index
+  persist_directory: "faiss_store"
+  
+  # FAISS index type
+  index_type: "IndexFlatL2"  # L2 distance
+  # index_type: "IndexFlatIP"  # Inner product (for normalized vectors)
+  
+  # Vector dimension (auto-detected from embedding model)
+  # dimension: 384  # for all-MiniLM-L6-v2
+  
+  # Index factory string for advanced FAISS configurations
+  # index_factory: "Flat"  # Simple flat index
+  # index_factory: "IVF100,Flat"  # Inverted file with 100 centroids
+
+# Search Configuration
+search:
+  # Default number of top results to retrieve
+  default_top_k: 3
+  
+  # Maximum allowed top_k value
+  max_top_k: 20
+  
+  # Minimum allowed top_k value
+  min_top_k: 1
+  
+  # Search result post-processing
+  include_distances: true
+  include_metadata: true
+  
+  # Text preview length for search results
+  text_preview_length: 200
+
+# LLM Configuration
+llm:
+  # LLM provider (gemini, openai, anthropic, huggingface)
+  provider: "gemini"
+  
+  # Model configuration
+  gemini:
+    model_name: "gemini-2.5-flash"
+    # model_name: "gemini-pro"  # Alternative model
+    api_key_env: "GEMINI_API_KEY"  # Environment variable name
+    fallback_api_key_env: "GOOGLE_API_KEY"
+    
+    # Generation parameters
+    temperature: 0.3
+    max_tokens: 1000
+    top_p: 0.9
+  
+  # OpenAI configuration (if using OpenAI)
+  openai:
+    model_name: "gpt-3.5-turbo"
+    # model_name: "gpt-4"
+    api_key_env: "OPENAI_API_KEY"
+    temperature: 0.3
+    max_tokens: 1000
+  
+  # Anthropic configuration (if using Claude)
+  anthropic:
+    model_name: "claude-3-sonnet-20240229"
+    api_key_env: "ANTHROPIC_API_KEY"
+    temperature: 0.3
+    max_tokens: 1000
+
+# Prompt Templates
+prompts:
+  # System prompt for RAG responses
+  system_prompt: |
+    You are a helpful AI assistant that answers questions based on the provided context.
+    Use only the information from the context to answer questions.
+    If the context doesn't contain enough information to answer the question, say so clearly.
+    Be concise but comprehensive in your responses.
+  
+  # Template for RAG queries
+  rag_template: |
+    Context information from relevant documents:
+    {context}
+    
+    Question: {query}
+    
+    Based on the context above, provide a helpful and accurate answer to the question.
+    If the context doesn't contain sufficient information to answer the question, please state that clearly.
+    
+    Answer:
+  
+  # Template for summarization
+  summary_template: |
+    Summarize the following context for the query: '{query}'
+    
+    Context:
+    {context}
+    
+    Summary:
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "[%(levelname)s] %(asctime)s - %(name)s - %(message)s"
+  
+  # Log to file
+  log_to_file: false
+  log_file: "rag_system.log"
+  
+  # Component-specific log levels
+  components:
+    data_loader: "INFO"
+    embedding: "INFO"
+    vectorstore: "INFO"
+    search: "INFO"
+    api: "INFO"
+
+# Performance Configuration
+performance:
+  # Caching configuration
+  cache_embeddings: true
+  cache_search_results: false
+  
+  # Parallel processing
+  max_workers: 4
+  
+  # Memory management
+  clear_cache_on_low_memory: true
+  max_memory_usage_mb: 2048
+
+# Security Configuration
+security:
+  # API rate limiting
+  rate_limiting:
+    enabled: false
+    requests_per_minute: 60
+    burst_size: 10
+  
+  # File upload security
+  scan_uploads: false
+  allowed_extensions_only: true
+  
+  # API key validation
+  require_api_key: false
+  api_key_header: "X-API-Key"
+
+# Monitoring and Analytics
+monitoring:
+  # Enable request/response logging
+  log_requests: true
+  log_responses: false
+  
+  # Performance metrics
+  track_response_times: true
+  track_memory_usage: false
+  
+  # Health check configuration
+  health_check_interval: 60  # seconds
+
+# Advanced RAG Features
+advanced:
+  # Query expansion
+  query_expansion:
+    enabled: false
+    methods: ["synonyms", "paraphrasing"]
+    max_expanded_queries: 3
+  
+  # Re-ranking
+  reranking:
+    enabled: false
+    model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    top_k_for_reranking: 10
+  
+  # Hybrid search
+  hybrid_search:
+    enabled: false
+    keyword_weight: 0.3
+    semantic_weight: 0.7
+  
+  # Document filtering
+  filtering:
+    enabled: false
+    filters: ["document_type", "date_range", "author"]
+  
+  # Response generation modes
+  generation_modes:
+    - "summarize"  # Default: summarize context
+    - "extract"    # Extract relevant information
+    - "answer"     # Direct question answering
+    - "explain"    # Detailed explanation
+
+# Evaluation Configuration
+evaluation:
+  # Enable evaluation metrics
+  enabled: false
+  
+  # Metrics to calculate
+  metrics:
+    - "relevance"
+    - "faithfulness"
+    - "answer_similarity"
+    - "context_precision"
+    - "context_recall"
+  
+  # Ground truth dataset path
+  ground_truth_path: "evaluation/ground_truth.json"
+  
+  # Evaluation model
+  evaluation_model: "gpt-3.5-turbo"
+
+# Development and Debugging
+development:
+  # Debug mode
+  debug: false
+  
+  # Verbose logging
+  verbose: false
+  
+  # Save intermediate results
+  save_chunks: false
+  save_embeddings: false
+  save_search_results: false
+  
+  # Test data
+  test_queries: [
+    "What is this document about?",
+    "What are the main topics discussed?",
+    "Summarize the key points.",
+    "What technologies are mentioned?"
+  ]
