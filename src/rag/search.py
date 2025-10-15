@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from src.vectorstore import FaissVectorStore
+from .vectorstore import FaissVectorStore
 from langchain_google_genai import ChatGoogleGenerativeAI
 from src.config import get_llm_config, get_vectorstore_config, get_search_config, get_embedding_config, config
 

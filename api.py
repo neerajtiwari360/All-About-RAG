@@ -9,9 +9,9 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 
-from src.data_loader import load_all_documents
-from src.vectorstore import FaissVectorStore
-from src.search import RAGSearch
+from src.rag.data_loader import load_all_documents
+from src.rag.vectorstore import FaissVectorStore
+from src.rag.search import RAGSearch
 from src.config import config, get_server_config, get_document_config, get_search_config, get_llm_config
 
 # Load environment variables
