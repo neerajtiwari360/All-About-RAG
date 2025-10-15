@@ -131,7 +131,9 @@ GEMINI_API_KEY=your_gemini_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-### Usage
+### Usage Options
+
+#### Option 1: Command Line Interface (CLI)
 
 1. **Add your documents** to the `data/` folder (supports PDF, TXT, CSV, Excel, Word, JSON)
 
@@ -145,6 +147,307 @@ python app.py
    - 🔄 Checks for existing vector store, builds new one if needed
    - 🔍 Processes your query against the document knowledge base
    - 📝 Returns AI-generated summary based on relevant document content
+
+#### Option 2: FastAPI Web Service
+
+1. **Install additional dependencies** (already included in requirements.txt):
+```bash
+pip install fastapi uvicorn python-multipart aiofiles
+```
+
+2. **Start the API server**:
+```bash
+python api.py
+# or
+uvicorn api:app --reload --host 0.0.0.0 --port 8000
+```
+
+3. **Access the API**:
+   - 🌐 **API Server**: http://localhost:8000
+   - 📚 **Interactive Docs**: http://localhost:8000/docs
+   - 📖 **ReDoc Documentation**: http://localhost:8000/redoc
+
+## 🔌 API Endpoints
+
+### Health & Information
+
+| Method | Endpoint | Description | Response |
+|--------|----------|-------------|----------|
+| `GET` | `/` | API information and available endpoints | Basic API info |
+| `GET` | `/health` | Health check and system status | System health status |
+
+### Document Management
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| `GET` | `/documents` | List all uploaded documents | None | Document list with metadata |
+| `POST` | `/documents/upload` | Upload new documents | `multipart/form-data` with files | Upload confirmation |
+| `DELETE` | `/documents` | Clear all documents | None | Deletion confirmation |
+
+### Search & RAG
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| `POST` | `/search` | Perform RAG search and get AI summary | JSON with query and top_k | Search results and summary |
+
+### Vector Store Management
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| `DELETE` | `/vectorstore` | Clear the vector database | None | Deletion confirmation |
+
+## 📋 API Usage Examples
+
+### 1. Health Check
+```bash
+curl -X GET "http://localhost:8000/health"
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "vectorstore_exists": true,
+  "total_documents": 15
+}
+```
+
+### 2. Upload Documents
+```bash
+curl -X POST "http://localhost:8000/documents/upload" \
+  -F "files=@document1.pdf" \
+  -F "files=@document2.txt"
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully uploaded 2 files and rebuilt vectorstore",
+  "uploaded_files": ["document1.pdf", "document2.txt"],
+  "vectorstore_rebuilt": true
+}
+```
+
+### 3. Search Documents
+```bash
+curl -X POST "http://localhost:8000/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the main technologies mentioned?",
+    "top_k": 3
+  }'
+```
+
+**Response:**
+```json
+{
+  "query": "What are the main technologies mentioned?",
+  "summary": "Based on the documents, the main technologies mentioned include...",
+  "sources": [
+    {
+      "chunk_id": 0,
+      "distance": 0.245,
+      "text_preview": "The document discusses various technologies including Python, FastAPI...",
+      "full_text": "Complete text of the relevant chunk..."
+    }
+  ],
+  "total_chunks": 15
+}
+```
+
+### 4. List Documents
+```bash
+curl -X GET "http://localhost:8000/documents"
+```
+
+**Response:**
+```json
+{
+  "documents": [
+    {
+      "filename": "document1.pdf",
+      "size": 245760,
+      "type": ".pdf"
+    }
+  ],
+  "total_count": 1
+}
+```
+
+## 🧪 Testing with Postman
+
+### Import the Collection
+
+1. **Download Postman** from [postman.com](https://www.postman.com/)
+
+2. **Import the collection**:
+   - Open Postman
+   - Click "Import"
+   - Select `RAG_API_Collection.postman_collection.json`
+   - Select `RAG_API_Environment.postman_environment.json`
+
+3. **Set the environment**:
+   - Click the environment dropdown (top right)
+   - Select "RAG API Environment"
+
+### Available Test Collections
+
+#### 🏥 Health & Status
+- **Root - API Info**: Get basic API information
+- **Health Check**: Check system health and vectorstore status
+
+#### 📄 Document Management
+- **List Documents**: View all uploaded documents
+- **Upload Documents**: Upload new files (PDF, TXT, CSV, Excel, Word, JSON)
+- **Clear All Documents**: Remove all documents from the system
+
+#### 🔍 Search & RAG
+- **Basic Search**: Standard RAG query with default parameters
+- **Search with High Precision**: Single best result (top_k=1)
+- **Search with More Context**: Broader context search (top_k=5)
+- **Technical Query Example**: Specialized technical question
+
+#### 🗄️ Vector Store Management
+- **Clear Vector Store**: Reset the entire vector database
+
+#### ⚠️ Error Handling Tests
+- **Search with Empty Query**: Test validation
+- **Search with Invalid top_k**: Test parameter validation
+- **Upload Unsupported File Type**: Test file type validation
+
+### Testing Workflow
+
+1. **Start the API server**:
+   ```bash
+   python api.py
+   ```
+
+2. **Check health**:
+   - Run "Health Check" request
+   - Verify `vectorstore_exists: false` initially
+
+3. **Upload documents**:
+   - Use "Upload Documents" request
+   - Select test files from your system
+   - Verify successful upload and vectorstore rebuild
+
+4. **Test search functionality**:
+   - Run various search requests
+   - Try different `top_k` values
+   - Test with different query types
+
+5. **Validate error handling**:
+   - Test edge cases with the error handling collection
+   - Verify appropriate error messages
+
+## 📊 API Schemas
+
+### Request Models
+
+#### SearchRequest
+```json
+{
+  "query": "string (required)",
+  "top_k": "integer (optional, default: 3)"
+}
+```
+
+#### File Upload
+- **Content-Type**: `multipart/form-data`
+- **Field**: `files` (supports multiple files)
+- **Supported formats**: `.pdf`, `.txt`, `.csv`, `.xlsx`, `.docx`, `.json`
+
+### Response Models
+
+#### SearchResponse
+```json
+{
+  "query": "string",
+  "summary": "string",
+  "sources": [
+    {
+      "chunk_id": "integer",
+      "distance": "float",
+      "text_preview": "string",
+      "full_text": "string"
+    }
+  ],
+  "total_chunks": "integer"
+}
+```
+
+#### HealthResponse
+```json
+{
+  "status": "healthy|degraded",
+  "vectorstore_exists": "boolean",
+  "total_documents": "integer|null"
+}
+```
+
+#### DocumentsResponse
+```json
+{
+  "documents": [
+    {
+      "filename": "string",
+      "size": "integer",
+      "type": "string"
+    }
+  ],
+  "total_count": "integer"
+}
+```
+
+#### UploadResponse
+```json
+{
+  "message": "string",
+  "uploaded_files": ["string"],
+  "vectorstore_rebuilt": "boolean"
+}
+```
+
+## 🛠️ Development Setup
+
+### Running in Development Mode
+
+```bash
+# Start with auto-reload
+uvicorn api:app --reload --host 0.0.0.0 --port 8000
+
+# Start with custom host/port
+uvicorn api:app --host 127.0.0.1 --port 3000
+```
+
+### Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `GEMINI_API_KEY` | Yes | Google Gemini API key | None |
+| `GOOGLE_API_KEY` | Yes | Alternative to GEMINI_API_KEY | None |
+
+### Docker Support (Optional)
+
+Create a `Dockerfile`:
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 8000
+
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Run with Docker:
+```bash
+docker build -t rag-api .
+docker run -p 8000:8000 -e GEMINI_API_KEY=your_key_here rag-api
+```
 
 ## 🏗️ Architecture Overview
 
