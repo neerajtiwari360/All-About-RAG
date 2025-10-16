@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
@@ -41,6 +42,11 @@ app.add_middleware(
     allow_methods=cors_config["allow_methods"],
     allow_headers=cors_config["allow_headers"],
 )
+
+# Mount static files
+static_dir = Path("static")
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Global variables for RAG components
 rag_search: Optional[RAGSearch] = None
@@ -122,15 +128,51 @@ async def startup_event():
     else:
         print("[WARN] RAG API started but initialization failed")
 
-@app.get("/", response_model=Dict[str, str])
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    """Root endpoint with API information"""
+    """Serve the main HTML interface"""
+    static_file = Path("static/index.html")
+    if static_file.exists():
+        try:
+            return HTMLResponse(content=static_file.read_text(encoding='utf-8'), status_code=200)
+        except Exception as e:
+            print(f"[ERROR] Failed to read HTML file: {e}")
+            return HTMLResponse(content=f"""
+            <html>
+                <body>
+                    <h1>RAG API is running</h1>
+                    <p>API documentation available at <a href="/docs">/docs</a></p>
+                    <p>Health check available at <a href="/health">/health</a></p>
+                    <p>Error loading interface: {str(e)}</p>
+                </body>
+            </html>
+            """, status_code=200)
+    else:
+        return HTMLResponse(content="""
+        <html>
+            <body>
+                <h1>RAG API is running</h1>
+                <p>API documentation available at <a href="/docs">/docs</a></p>
+                <p>Health check available at <a href="/health">/health</a></p>
+                <p>Static files not found. Expected at: static/index.html</p>
+            </body>
+        </html>
+        """, status_code=200)
+
+@app.get("/api", response_model=Dict[str, str])
+async def api_info():
+    """API information endpoint"""
     return {
         "message": "RAG API is running",
         "docs": "/docs",
         "health": "/health",
         "version": "1.0.0"
     }
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Return a simple favicon to prevent 404 errors"""
+    return Response(status_code=204)
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():

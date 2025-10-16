@@ -5,13 +5,14 @@ import pickle
 from typing import List, Any
 from sentence_transformers import SentenceTransformer
 from .embedding import EmbeddingPipeline
-from src.config import get_vectorstore_config, get_embedding_config, get_search_config
+from src.config import get_vectorstore_config, get_embedding_config, get_search_config, get_chunking_config
 
 class FaissVectorStore:
     def __init__(self, persist_dir: str = None, embedding_model: str = None, chunk_size: int = None, chunk_overlap: int = None):
         # Load configuration
         vectorstore_config = get_vectorstore_config()
         embedding_config = get_embedding_config()
+        chunking_config = get_chunking_config()
         
         self.persist_dir = persist_dir or vectorstore_config.persist_directory
         os.makedirs(self.persist_dir, exist_ok=True)
@@ -20,8 +21,8 @@ class FaissVectorStore:
         self.metadata = []
         self.embedding_model = embedding_model or embedding_config.model_name
         self.model = SentenceTransformer(self.embedding_model, device=embedding_config.device)
-        self.chunk_size = chunk_size or embedding_config.batch_size
-        self.chunk_overlap = chunk_overlap
+        self.chunk_size = chunk_size or chunking_config.chunk_size
+        self.chunk_overlap = chunk_overlap or chunking_config.chunk_overlap
         
         print(f"[INFO] Loaded embedding model: {self.embedding_model}")
         print(f"[INFO] Vector store directory: {self.persist_dir}")
