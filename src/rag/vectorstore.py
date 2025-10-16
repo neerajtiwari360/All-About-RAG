@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 from typing import List, Any
 from sentence_transformers import SentenceTransformer
+from .chunking import ChunkingPipeline
 from .embedding import EmbeddingPipeline
 from src.config import get_vectorstore_config, get_embedding_config, get_search_config, get_chunking_config
 
@@ -37,12 +38,12 @@ class FaissVectorStore:
 
     def build_from_documents(self, documents: List[Any]):
         print(f"[INFO] Building vector store from {len(documents)} raw documents...")
-        emb_pipe = EmbeddingPipeline(
-            model_name=self.embedding_model, 
+        chunk_pipe = ChunkingPipeline(
             chunk_size=self.chunk_size, 
             chunk_overlap=self.chunk_overlap
         )
-        chunks = emb_pipe.chunk_documents(documents)
+        emb_pipe = EmbeddingPipeline(model_name=self.embedding_model)
+        chunks = chunk_pipe.chunk_documents(documents)
         embeddings = emb_pipe.embed_chunks(chunks)
         metadatas = [{"text": chunk.page_content} for chunk in chunks]
         self.add_embeddings(np.array(embeddings).astype('float32'), metadatas)

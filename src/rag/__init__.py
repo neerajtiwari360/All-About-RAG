@@ -10,12 +10,14 @@ This package contains all the core modules for the Retrieval-Augmented Generatio
 """
 
 from .data_loader import load_all_documents
+from .chunking import ChunkingPipeline
 from .embedding import EmbeddingPipeline
 from .vectorstore import FaissVectorStore
 from .search import RAGSearch
 
 __all__ = [
     "load_all_documents",
+    "ChunkingPipeline",
     "EmbeddingPipeline", 
     "FaissVectorStore",
     "RAGSearch"
