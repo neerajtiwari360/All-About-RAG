@@ -10,14 +10,15 @@ This is a Retrieval-Augmented Generation (RAG) system that processes documents (
 
 ## Key Components
 - `src/rag/data_loader.py`: Multi-format document loading using LangChain loaders
-- `src/rag/embedding.py`: Text chunking and SentenceTransformer embedding generation
+- `src/rag/chunking.py`: Text chunking using RecursiveCharacterTextSplitter
+- `src/rag/embedding.py`: Text chunk embedding using SentenceTransformer models
 - `src/rag/vectorstore.py`: FAISS index management with pickle metadata storage
 - `src/rag/search.py`: Query embedding + vector search + LLM summarization
 - `api.py`: FastAPI with CORS, file upload, search endpoints
 - `config.yaml`: Centralized YAML config with dataclasses in `src/config.py`
 
 ## Development Workflow
-1. **Setup**: `python -m venv .venv; .venv\Scripts\activate; pip install -r requirements.txt`
+1. **Setup**: If `.venv` doesn't exist: `python -m venv .venv`. Then: `.venv\Scripts\activate` (Windows) or `source .venv/bin/activate` (Linux/Mac); `pip install -r requirements.txt`
 2. **Environment**: Create `.env` with `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 3. **Run API**: `uvicorn api:app --reload --host 0.0.0.0 --port 8000`
 4. **Access**: Web UI at `http://localhost:8000`, API docs at `/docs`
