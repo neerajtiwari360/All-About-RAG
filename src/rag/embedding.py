@@ -5,6 +5,14 @@ import numpy as np
 from .data_loader import load_all_documents
 from src.config import get_chunking_config, get_embedding_config
 
+"""
+Embedding Pipeline Module
+
+This module handles text chunking and embedding generation for documents.
+It splits large documents into manageable chunks and converts them into
+vector embeddings using SentenceTransformer models for efficient retrieval.
+"""
+
 class EmbeddingPipeline:
     def __init__(self, model_name: str = None, chunk_size: int = None, chunk_overlap: int = None):
         # Load configuration

@@ -6,6 +6,14 @@ from langchain_community.document_loaders.excel import UnstructuredExcelLoader
 from langchain_community.document_loaders import JSONLoader
 from src.config import get_document_config
 
+"""
+Data Loader Module
+
+This module handles loading and parsing documents from various file formats
+(PDF, TXT, CSV, XLSX, DOCX, JSON) into unified LangChain document structures
+for processing in the RAG pipeline.
+"""
+
 def load_all_documents(data_dir: str = None) -> List[Any]:
     """
     Load all supported files from the data directory and convert to LangChain document structure.

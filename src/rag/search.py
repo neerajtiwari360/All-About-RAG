@@ -6,6 +6,14 @@ from src.config import get_llm_config, get_vectorstore_config, get_search_config
 
 load_dotenv()
 
+"""
+RAG Search Module
+
+This module implements the core RAG (Retrieval-Augmented Generation) search functionality.
+It combines vector similarity search with LLM-based summarization to provide
+contextual answers based on the uploaded documents.
+"""
+
 class RAGSearch:
     def __init__(
         self,

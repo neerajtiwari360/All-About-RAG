@@ -7,6 +7,14 @@ from sentence_transformers import SentenceTransformer
 from .embedding import EmbeddingPipeline
 from src.config import get_vectorstore_config, get_embedding_config, get_search_config, get_chunking_config
 
+"""
+Vector Store Module
+
+This module manages the FAISS-based vector storage system for efficient similarity search.
+It handles building, saving, loading, and querying vector indexes for document embeddings,
+enabling fast retrieval of relevant document chunks during RAG operations.
+"""
+
 class FaissVectorStore:
     def __init__(self, persist_dir: str = None, embedding_model: str = None, chunk_size: int = None, chunk_overlap: int = None):
         # Load configuration
