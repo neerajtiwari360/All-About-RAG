@@ -4,23 +4,35 @@ import numpy as np
 import pickle
 from typing import List, Any
 from sentence_transformers import SentenceTransformer
-from src.embedding import EmbeddingPipeline
+from .embedding import EmbeddingPipeline
+from src.config import get_vectorstore_config, get_embedding_config, get_search_config
 
 class FaissVectorStore:
-    def __init__(self, persist_dir: str = "faiss_store", embedding_model: str = "all-MiniLM-L6-v2", chunk_size: int = 1000, chunk_overlap: int = 200):
-        self.persist_dir = persist_dir
+    def __init__(self, persist_dir: str = None, embedding_model: str = None, chunk_size: int = None, chunk_overlap: int = None):
+        # Load configuration
+        vectorstore_config = get_vectorstore_config()
+        embedding_config = get_embedding_config()
+        
+        self.persist_dir = persist_dir or vectorstore_config.persist_directory
         os.makedirs(self.persist_dir, exist_ok=True)
+        
         self.index = None
         self.metadata = []
-        self.embedding_model = embedding_model
-        self.model = SentenceTransformer(embedding_model)
-        self.chunk_size = chunk_size
+        self.embedding_model = embedding_model or embedding_config.model_name
+        self.model = SentenceTransformer(self.embedding_model, device=embedding_config.device)
+        self.chunk_size = chunk_size or embedding_config.batch_size
         self.chunk_overlap = chunk_overlap
-        print(f"[INFO] Loaded embedding model: {embedding_model}")
+        
+        print(f"[INFO] Loaded embedding model: {self.embedding_model}")
+        print(f"[INFO] Vector store directory: {self.persist_dir}")
 
     def build_from_documents(self, documents: List[Any]):
         print(f"[INFO] Building vector store from {len(documents)} raw documents...")
-        emb_pipe = EmbeddingPipeline(model_name=self.embedding_model, chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+        emb_pipe = EmbeddingPipeline(
+            model_name=self.embedding_model, 
+            chunk_size=self.chunk_size, 
+            chunk_overlap=self.chunk_overlap
+        )
         chunks = emb_pipe.chunk_documents(documents)
         embeddings = emb_pipe.embed_chunks(chunks)
         metadatas = [{"text": chunk.page_content} for chunk in chunks]
@@ -61,16 +73,34 @@ class FaissVectorStore:
             self.metadata = pickle.load(f)
         print(f"[INFO] Loaded Faiss index and metadata from {self.persist_dir}")
 
-    def search(self, query_embedding: np.ndarray, top_k: int = 5):
+    def search(self, query_embedding: np.ndarray, top_k: int = None):
+        # Use configuration for default top_k
+        search_config = get_search_config()
+        if top_k is None:
+            top_k = search_config.default_top_k
+        
+        # Validate top_k range
+        top_k = max(search_config.min_top_k, min(top_k, search_config.max_top_k))
+        
         D, I = self.index.search(query_embedding, top_k)
         results = []
         for idx, dist in zip(I[0], D[0]):
             meta = self.metadata[idx] if idx < len(self.metadata) else None
-            results.append({"index": idx, "distance": dist, "metadata": meta})
+            result = {"index": idx, "metadata": meta}
+            
+            # Include distance if configured
+            if search_config.include_distances:
+                result["distance"] = float(dist)
+            
+            results.append(result)
         return results
 
-    def query(self, query_text: str, top_k: int = 5):
-        print(f"[INFO] Querying vector store for: '{query_text}'")
+    def query(self, query_text: str, top_k: int = None):
+        search_config = get_search_config()
+        if top_k is None:
+            top_k = search_config.default_top_k
+            
+        print(f"[INFO] Querying vector store for: '{query_text}' (top_k={top_k})")
         query_emb = self.model.encode([query_text]).astype('float32')
         return self.search(query_emb, top_k=top_k)
 

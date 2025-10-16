@@ -1,0 +1,89 @@
+# RAG System Configuration
+# Essential configuration parameters for the RAG system
+
+# API Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+  log_level: "info"
+  title: "RAG API"
+  description: "Retrieval-Augmented Generation API for document search and question answering"
+  version: "1.0.0"
+  docs_url: "/docs"
+  redoc_url: "/redoc"
+
+# CORS Configuration
+cors:
+  allow_origins: ["*"]
+  allow_credentials: true
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+
+# Document Processing Configuration
+documents:
+  data_directory: "data"
+  supported_formats:
+    - ".pdf"
+    - ".txt"
+    - ".csv"
+    - ".xlsx"
+    - ".docx"
+    - ".json"
+  max_file_size_mb: 50
+  max_files_per_upload: 10
+
+# Text Chunking Configuration
+chunking:
+  chunk_size: 1000
+  chunk_overlap: 200
+  separators:
+    - "\n\n"
+    - "\n"
+    - " "
+    - ""
+
+# Embedding Model Configuration
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  batch_size: 32
+  show_progress_bar: true
+  device: "auto"
+
+# Vector Store Configuration
+vectorstore:
+  persist_directory: "faiss_store"
+  index_type: "IndexFlatL2"
+
+# Search Configuration
+search:
+  default_top_k: 3
+  max_top_k: 20
+  min_top_k: 1
+  include_distances: true
+  include_metadata: true
+  text_preview_length: 200
+
+# LLM Configuration
+llm:
+  provider: "gemini"
+  gemini:
+    model_name: "gemini-2.5-flash"
+    api_key_env: "GEMINI_API_KEY"
+    fallback_api_key_env: "GOOGLE_API_KEY"
+    temperature: 0.3
+    max_tokens: 1000
+    top_p: 0.9
+
+# Prompt Templates
+prompts:
+  rag_template: |
+    Context information from relevant documents:
+    {context}
+    
+    Question: {query}
+    
+    Based on the context above, provide a helpful and accurate answer to the question.
+    If the context doesn't contain sufficient information to answer the question, please state that clearly.
+    
+    Answer:

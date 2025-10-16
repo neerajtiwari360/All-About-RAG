@@ -481,39 +481,217 @@ docker run -p 8000:8000 -e GEMINI_API_KEY=your_key_here rag-api
 
 ## 🔧 Configuration Options
 
-### Embedding Pipeline
-```python
-EmbeddingPipeline(
-    model_name="all-MiniLM-L6-v2",  # Embedding model
-    chunk_size=1000,                # Characters per chunk
-    chunk_overlap=200               # Overlap between chunks
-)
+### Configuration File (`config.yaml`)
+
+All RAG system parameters are now centralized in `config.yaml`. This allows easy customization without modifying code:
+
+#### Server Configuration
+```yaml
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+  title: "RAG API"
+  description: "Retrieval-Augmented Generation API"
 ```
 
-### Vector Store
-```python
-FaissVectorStore(
-    persist_dir="faiss_store",      # Storage directory
-    embedding_model="all-MiniLM-L6-v2"  # Must match embedding pipeline
-)
+#### Document Processing
+```yaml
+documents:
+  data_directory: "data"
+  supported_formats: [".pdf", ".txt", ".csv", ".xlsx", ".docx", ".json"]
+  max_file_size_mb: 50
+  max_files_per_upload: 10
 ```
 
-### RAG Search
+#### Text Chunking
+```yaml
+chunking:
+  chunk_size: 1000
+  chunk_overlap: 200
+  separators: ["\n\n", "\n", " ", ""]
+```
+
+#### Embedding Model
+```yaml
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  batch_size: 32
+  show_progress_bar: true
+  device: "auto"
+```
+
+#### Vector Store
+```yaml
+vectorstore:
+  persist_directory: "faiss_store"
+  index_type: "IndexFlatL2"
+```
+
+#### Search Configuration
+```yaml
+search:
+  default_top_k: 3
+  max_top_k: 20
+  min_top_k: 1
+  text_preview_length: 200
+```
+
+#### LLM Configuration
+```yaml
+llm:
+  provider: "gemini"
+  gemini:
+    model_name: "gemini-2.5-flash"
+    api_key_env: "GEMINI_API_KEY"
+    temperature: 0.3
+    max_tokens: 1000
+```
+
+#### Prompt Templates
+```yaml
+prompts:
+  rag_template: |
+    Context information from relevant documents:
+    {context}
+    
+    Question: {query}
+    
+    Based on the context above, provide a helpful and accurate answer.
+    
+    Answer:
+```
+
+### Programmatic Configuration
+
+You can also modify configuration programmatically:
+
 ```python
-RAGSearch(
-    persist_dir="faiss_store",      # Vector store location
-    embedding_model="all-MiniLM-L6-v2",  # Embedding model
-    llm_model="gemini-2.5-flash"   # LLM for generation
-)
+from src.config import config
+
+# Update configuration
+config.update_config("chunking.chunk_size", 1500)
+config.update_config("search.default_top_k", 5)
+
+# Save changes
+config.save_config()
+
+# Reload configuration
+config.reload()
+```
+
+### Legacy Configuration Support
+
+For backward compatibility, you can still pass parameters directly to classes:
+
+```python
+# These override config.yaml values
+emb_pipe = EmbeddingPipeline(chunk_size=800, chunk_overlap=100)
+vectorstore = FaissVectorStore(persist_dir="custom_store")
 ```
 
 ## 🎯 Advanced Features
+
+### Configuration-Driven Architecture
+
+- **📁 Centralized Config**: All parameters in `config.yaml` for easy management
+- **🔄 Runtime Updates**: Modify configuration without code changes
+- **🔧 Environment-Specific**: Different configs for dev/staging/production
+- **📊 Parameter Validation**: Automatic validation of configuration values
+- **🔀 Flexible Overrides**: Command-line and programmatic parameter overrides
+
+### Current RAG Features
 
 - **Multi-format Support**: Handles PDF, TXT, CSV, Excel, Word, and JSON files
 - **Persistent Storage**: Vector indices survive application restarts
 - **Configurable Chunking**: Adjust chunk size and overlap for your use case
 - **Error Handling**: Robust error handling with detailed logging
 - **Scalable Architecture**: Easily extensible for additional file formats or LLMs
+- **API Validation**: Comprehensive input validation and error responses
+- **File Size Limits**: Configurable file size and upload limits
+- **Health Monitoring**: Real-time system health and status endpoints
+
+### Planned Advanced RAG Features (config.yaml ready)
+
+The configuration system is already prepared for advanced RAG features:
+
+#### Query Enhancement
+```yaml
+advanced:
+  query_expansion:
+    enabled: true
+    methods: ["synonyms", "paraphrasing"]
+    max_expanded_queries: 3
+```
+
+#### Re-ranking
+```yaml
+advanced:
+  reranking:
+    enabled: true
+    model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    top_k_for_reranking: 10
+```
+
+#### Hybrid Search
+```yaml
+advanced:
+  hybrid_search:
+    enabled: true
+    keyword_weight: 0.3
+    semantic_weight: 0.7
+```
+
+#### Document Filtering
+```yaml
+advanced:
+  filtering:
+    enabled: true
+    filters: ["document_type", "date_range", "author"]
+```
+
+### Configuration Management Examples
+
+#### Development vs Production Configs
+
+**`config.dev.yaml`**:
+```yaml
+server:
+  reload: true
+  log_level: "debug"
+documents:
+  max_file_size_mb: 10
+search:
+  default_top_k: 2
+```
+
+**`config.prod.yaml`**:
+```yaml
+server:
+  reload: false
+  log_level: "warning"
+documents:
+  max_file_size_mb: 100
+search:
+  default_top_k: 5
+```
+
+#### Runtime Configuration Updates
+
+```python
+# Update search parameters on the fly
+from src.config import config
+
+# Increase search precision
+config.update_config("search.default_top_k", 5)
+config.update_config("search.max_top_k", 10)
+
+# Switch to a different embedding model
+config.update_config("embedding.model_name", "all-mpnet-base-v2")
+
+# Save changes
+config.save_config("config.custom.yaml")
+```
 
 ## 🔮 Future Enhancements
 
