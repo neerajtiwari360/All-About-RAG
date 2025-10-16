@@ -163,9 +163,72 @@ uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 3. **Access the API**:
-   - 🌐 **API Server**: http://localhost:8000
+   - 🌐 **Web Interface**: http://localhost:8000 (New HTML UI!)
    - 📚 **Interactive Docs**: http://localhost:8000/docs
    - 📖 **ReDoc Documentation**: http://localhost:8000/redoc
+
+#### Option 3: HTML Web Interface
+
+**NEW!** We now provide a beautiful, modern HTML interface for easy interaction with your RAG system:
+
+1. **Start the API server** (as above)
+
+2. **Open the web interface**: Navigate to http://localhost:8000 in your browser
+
+3. **Features available**:
+   - 🎯 **Interactive Search**: Enter questions and get AI-powered answers
+   - 📁 **Document Upload**: Drag & drop files or browse to upload
+   - 📊 **Real-time Monitoring**: System health and document status
+   - 🎨 **Modern Design**: Responsive interface with beautiful animations
+   - ⚡ **Fast & Intuitive**: No technical knowledge required
+
+4. **Usage**:
+   - Upload documents using the drag & drop interface
+   - Enter your questions in the search box
+   - Get instant AI-generated answers with source references
+   - Manage your document collection easily
+
+## 🌐 HTML Web Interface
+
+The new HTML web interface provides a user-friendly way to interact with your RAG system without any technical knowledge required.
+
+### 🎨 Interface Features
+
+#### **Document Management**
+- **Drag & Drop Upload**: Simply drag files onto the upload area
+- **Multi-file Support**: Upload multiple documents simultaneously  
+- **File Validation**: Automatic validation of file types and sizes
+- **Progress Tracking**: Real-time upload progress and status
+- **Document List**: View all uploaded files with metadata
+
+#### **Smart Search & Q&A**
+- **Natural Language Queries**: Ask questions in plain English
+- **AI-Powered Answers**: Get comprehensive responses based on your documents
+- **Source References**: See exactly which documents contributed to each answer
+- **Configurable Results**: Adjust the number of source documents to consider
+- **Real-time Processing**: Instant search results with loading indicators
+
+#### **System Monitoring**
+- **Health Dashboard**: Real-time system status and health monitoring
+- **Document Statistics**: Track number of processed documents
+- **Vectorstore Status**: Monitor the search database status
+- **Auto-refresh**: Automatic status updates every 30 seconds
+
+#### **User Experience**
+- **Responsive Design**: Works perfectly on desktop and mobile devices
+- **Modern UI**: Beautiful gradients, animations, and intuitive design
+- **Error Handling**: Clear error messages and user guidance
+- **Keyboard Shortcuts**: Power user features for increased productivity
+- **Accessibility**: Screen reader friendly and keyboard navigable
+
+### 🚀 Getting Started with the Web Interface
+
+1. **Start the server**: `python api.py`
+2. **Open your browser**: Go to `http://localhost:8000`
+3. **Upload documents**: Drag & drop your PDF, Word, or text files
+4. **Ask questions**: Type your questions and get instant AI answers!
+
+For detailed usage instructions, see the [HTML Interface Documentation](static/README.md).
 
 ## 🔌 API Endpoints
 
@@ -452,6 +515,10 @@ docker run -p 8000:8000 -e GEMINI_API_KEY=your_key_here rag-api
 ## 🏗️ Architecture Overview
 
 ```
+🌐 HTML Web Interface (static/index.html)
+    ↓
+🔌 FastAPI Server (api.py)
+    ↓
 📁 Data Sources (PDF, TXT, etc.)
     ↓
 📄 Document Loader (data_loader.py)
@@ -473,6 +540,8 @@ docker run -p 8000:8000 -e GEMINI_API_KEY=your_key_here rag-api
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
+| **Web Interface** | HTML5 + CSS3 + JavaScript | User-friendly web-based interaction |
+| **API Server** | FastAPI | RESTful API and static file serving |
 | **Document Loading** | LangChain Loaders | Parse multiple file formats |
 | **Text Splitting** | RecursiveCharacterTextSplitter | Intelligent document chunking |
 | **Embeddings** | sentence-transformers | Convert text to vectors |
